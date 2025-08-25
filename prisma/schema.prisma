@@ -1,0 +1,78 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = process.env.DATABASE_URL
+}
+
+model User {
+  id        String   @id @default(cuid())
+  address   String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  contracts   Contract[]
+  deployments Deployment[]
+  chatHistory ChatMessage[]
+
+  @@map("users")
+}
+
+model Contract {
+  id          String   @id @default(cuid())
+  name        String
+  symbol      String?
+  type        String   // erc20, erc721, erc1155, governance, custom
+  sourceCode  String
+  bytecode    String?
+  abi         Json?
+  features    String[] // mintable, burnable, pausable, etc.
+  parameters  Json?    // constructor parameters
+  status      String   @default("draft") // draft, compiled, deployed
+  version     Int      @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  deployments Deployment[]
+
+  @@map("contracts")
+}
+
+model Deployment {
+  id              String   @id @default(cuid())
+  contractAddress String
+  transactionHash String
+  blockNumber     BigInt?
+  gasUsed         BigInt?
+  gasPrice        BigInt?
+  network         String   // sei-mainnet, sei-testnet
+  status          String   @default("pending") // pending, confirmed, failed
+  errorMessage    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contractId String
+  contract   Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@map("deployments")
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  message   String
+  response  String
+  context   Json?    // contract code, current panel, etc.
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("chat_messages")
+}
